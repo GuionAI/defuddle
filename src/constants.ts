@@ -18,7 +18,6 @@ export const ENTRY_POINT_ELEMENTS = [
 	'body' // ensures there is always a match
 ];
 
-export const MOBILE_WIDTH = 600;
 export const BLOCK_ELEMENTS = ['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav', 'content'];
 
 // Elements that should not be unwrapped

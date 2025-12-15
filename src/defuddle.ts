@@ -2,7 +2,6 @@ import { MetadataExtractor } from './metadata';
 import { DefuddleOptions, DefuddleResponse, MetaTagItem } from './types';
 import { ExtractorRegistry } from './extractor-registry';
 import {
-	MOBILE_WIDTH,
 	BLOCK_ELEMENTS,
 	EXACT_SELECTORS,
 	PARTIAL_SELECTORS,
@@ -11,12 +10,6 @@ import {
 } from './constants';
 import { standardizeContent } from './standardize';
 import { ContentScorer, ContentScore } from './scoring';
-import { getComputedStyle } from './utils';
-
-interface StyleChange {
-	selector: string;
-	styles: string;
-}
 
 export class Defuddle {
 	private readonly doc: Document;
@@ -119,17 +112,8 @@ export class Defuddle {
 
 			// Continue if there is no extractor...
 
-			// Evaluate mobile styles and sizes on original document
-			const mobileStyles = this._evaluateMediaQueries(this.doc);
-
-			// Find small images in original document, excluding lazy-loaded ones
-			const smallImages = this.findSmallImages(this.doc);
-			
 			// Clone document
 			const clone = this.doc.cloneNode(true) as Document;
-			
-			// Apply mobile styles to clone
-			this.applyMobileStyles(clone, mobileStyles);
 
 			// Find main content
 			const mainContent = this.findMainContent(clone);
@@ -142,13 +126,7 @@ export class Defuddle {
 					parseTime: Math.round(endTime - startTime),
 					metaTags: pageMetaTags
 				};
-			}
-
-			// Remove small images
-			this.removeSmallImages(clone, smallImages);
-
-			// Remove hidden elements using computed styles
-			this.removeHiddenElements(clone);	
+			}	
 
 			// Remove non-content blocks by scoring
 			// Tries to find lists, navigation based on text content and link density
@@ -208,153 +186,11 @@ export class Defuddle {
 		}
 	}
 
-	private _evaluateMediaQueries(doc: Document): StyleChange[] {
-		const mobileStyles: StyleChange[] = [];
-		const maxWidthRegex = /max-width[^:]*:\s*(\d+)/;
-
-		try {
-			// Get all styles, including inline styles
-			const sheets = Array.from(doc.styleSheets).filter(sheet => {
-				try {
-					// Access rules once to check validity
-					sheet.cssRules;
-					return true;
-				} catch (e) {
-					// Expected error for cross-origin stylesheets or Node.js environment
-					if (e instanceof DOMException && e.name === 'SecurityError') {
-						return false;
-					}
-					return false;
-				}
-			});
-			
-			// Process all sheets in a single pass
-			const mediaRules = sheets.flatMap(sheet => {
-				try {
-					// Check if we're in a browser environment where CSSMediaRule is available
-					if (typeof CSSMediaRule === 'undefined') {
-						return [];
-					}
-
-					return Array.from(sheet.cssRules)
-						.filter((rule): rule is CSSMediaRule => 
-							rule instanceof CSSMediaRule &&
-							rule.conditionText.includes('max-width')
-						);
-				} catch (e) {
-					if (this.debug) {
-						console.warn('Defuddle: Failed to process stylesheet:', e);
-					}
-					return [];
-				}
-			});
-
-			// Process all media rules in a single pass
-			mediaRules.forEach(rule => {
-				const match = rule.conditionText.match(maxWidthRegex);
-				if (match) {
-					const maxWidth = parseInt(match[1]);
-					
-					if (MOBILE_WIDTH <= maxWidth) {
-						// Batch process all style rules
-						const styleRules = Array.from(rule.cssRules)
-							.filter((r): r is CSSStyleRule => r instanceof CSSStyleRule);
-
-						styleRules.forEach(cssRule => {
-							try {
-								mobileStyles.push({
-									selector: cssRule.selectorText,
-									styles: cssRule.style.cssText
-								});
-							} catch (e) {
-								if (this.debug) {
-									console.warn('Defuddle: Failed to process CSS rule:', e);
-								}
-							}
-						});
-					}
-				}
-			});
-		} catch (e) {
-			console.error('Defuddle: Error evaluating media queries:', e);
-		}
-
-		return mobileStyles;
-	}
-
-	private applyMobileStyles(doc: Document, mobileStyles: StyleChange[]) {
-		let appliedCount = 0;
-
-		mobileStyles.forEach(({selector, styles}) => {
-			try {
-				const elements = doc.querySelectorAll(selector);
-				elements.forEach(element => {
-					element.setAttribute('style', 
-						(element.getAttribute('style') || '') + styles
-					);
-					appliedCount++;
-				});
-			} catch (e) {
-				console.error('Defuddle', 'Error applying styles for selector:', selector, e);
-			}
-		});
-
-	}
-
 	private removeImages(doc: Document) {
 		const images = doc.getElementsByTagName('img');
 		Array.from(images).forEach(image => {
 			image.remove();
 		});
-	}
-
-	private removeHiddenElements(doc: Document) {
-		let count = 0;
-		const elementsToRemove = new Set<Element>();
-
-		// Get all elements and check their styles
-		const allElements = Array.from(doc.getElementsByTagName('*'));
-
-		// Process styles in batches to minimize layout thrashing
-		const BATCH_SIZE = 100;
-		for (let i = 0; i < allElements.length; i += BATCH_SIZE) {
-			const batch = allElements.slice(i, i + BATCH_SIZE);
-			
-			// Read phase - gather all computedStyles
-			const styles = batch.map(element => {
-				try {
-					return element.ownerDocument.defaultView?.getComputedStyle(element);
-				} catch (e) {
-					// If we can't get computed style, check inline styles
-					const style = element.getAttribute('style');
-					if (!style) return null;
-					
-					// Create a temporary style element to parse inline styles
-					const tempStyle = doc.createElement('style');
-					tempStyle.textContent = `* { ${style} }`;
-					doc.head.appendChild(tempStyle);
-					const computedStyle = element.ownerDocument.defaultView?.getComputedStyle(element);
-					doc.head.removeChild(tempStyle);
-					return computedStyle;
-				}
-			});
-			
-			// Write phase - mark elements for removal
-			batch.forEach((element, index) => {
-				const computedStyle = styles[index];
-				if (computedStyle && (
-					computedStyle.display === 'none' ||
-					computedStyle.visibility === 'hidden' ||
-					computedStyle.opacity === '0'
-				)) {
-					elementsToRemove.add(element);
-					count++;
-				}
-			});
-		}
-
-		// Batch remove all hidden elements
-		this._log('Removed hidden elements:', count);
 	}
 
 	private removeBySelector(doc: Document, removeExact: boolean = true, removePartial: boolean = true) {
@@ -428,167 +264,6 @@ export class Defuddle {
 		});
 	}
 
-	// Find small IMG and SVG elements
-	private findSmallImages(doc: Document): Set<string> {
-		const MIN_DIMENSION = 33;
-		const smallImages = new Set<string>();
-		const transformRegex = /scale\(([\d.]+)\)/;
-		const startTime = Date.now();
-		let processedCount = 0;
-
-		// 1. Read phase - Gather all elements in a single pass
-		const elements = [
-			...Array.from(doc.getElementsByTagName('img')),
-			...Array.from(doc.getElementsByTagName('svg'))
-		];
-
-		if (elements.length === 0) {
-			return smallImages;
-		}
-
-		// 2. Batch process - Collect all measurements in one go
-		const measurements = elements.map(element => ({
-			element,
-			// Static attributes (no reflow)
-			naturalWidth: element.tagName.toLowerCase() === 'img' ? 
-				parseInt(element.getAttribute('width') || '0') || 0 : 0,
-			naturalHeight: element.tagName.toLowerCase() === 'img' ? 
-				parseInt(element.getAttribute('height') || '0') || 0 : 0,
-			attrWidth: parseInt(element.getAttribute('width') || '0'),
-			attrHeight: parseInt(element.getAttribute('height') || '0')
-		}));
-
-		// 3. Batch compute styles - Process in chunks to avoid long tasks
-		const BATCH_SIZE = 50;
-		for (let i = 0; i < measurements.length; i += BATCH_SIZE) {
-			const batch = measurements.slice(i, i + BATCH_SIZE);
-			
-			try {
-				// Read phase - compute all styles at once
-				const styles = batch.map(({ element }) => {
-					try {
-						return element.ownerDocument.defaultView?.getComputedStyle(element);
-					} catch (e) {
-						return null;
-					}
-				});
-
-				// Get bounding rectangles if available
-				const rects = batch.map(({ element }) => {
-					try {
-						return element.getBoundingClientRect();
-					} catch (e) {
-						return null;
-					}
-				});
-				
-				// Process phase - no DOM operations
-				batch.forEach((measurement, index) => {
-					try {
-						const style = styles[index];
-						const rect = rects[index];
-						
-						if (!style) return;
-						
-						// Get transform scale in the same batch
-						const transform = style.transform;
-						const scale = transform ? 
-							parseFloat(transform.match(transformRegex)?.[1] || '1') : 1;
-
-						// Calculate effective dimensions
-						const widths = [
-							measurement.naturalWidth,
-							measurement.attrWidth,
-							parseInt(style.width) || 0,
-							rect ? rect.width * scale : 0
-						].filter(dim => typeof dim === 'number' && dim > 0);
-
-						const heights = [
-							measurement.naturalHeight,
-							measurement.attrHeight,
-							parseInt(style.height) || 0,
-							rect ? rect.height * scale : 0
-						].filter(dim => typeof dim === 'number' && dim > 0);
-
-						// Decision phase - no DOM operations
-						if (widths.length > 0 && heights.length > 0) {
-							const effectiveWidth = Math.min(...widths);
-							const effectiveHeight = Math.min(...heights);
-
-							if (effectiveWidth < MIN_DIMENSION || effectiveHeight < MIN_DIMENSION) {
-								const identifier = this.getElementIdentifier(measurement.element);
-								if (identifier) {
-									smallImages.add(identifier);
-									processedCount++;
-								}
-							}
-						}
-					} catch (e) {
-						if (this.debug) {
-							console.warn('Defuddle: Failed to process element dimensions:', e);
-						}
-					}
-				});
-			} catch (e) {
-				if (this.debug) {
-					console.warn('Defuddle: Failed to process batch:', e);
-				}
-			}
-		}
-
-		const endTime = Date.now();
-		this._log('Found small elements:', {
-			count: processedCount,
-			processingTime: `${(endTime - startTime).toFixed(2)}ms`
-		});
-
-		return smallImages;
-	}
-
-	private removeSmallImages(doc: Document, smallImages: Set<string>) {
-		let removedCount = 0;
-
-		['img', 'svg'].forEach(tag => {
-			const elements = doc.getElementsByTagName(tag);
-			Array.from(elements).forEach(element => {
-				const identifier = this.getElementIdentifier(element);
-				if (identifier && smallImages.has(identifier)) {
-					element.remove();
-					removedCount++;
-				}
-			});
-		});
-
-		this._log('Removed small elements:', removedCount);
-	}
-
-	private getElementIdentifier(element: Element): string | null {
-		// Try to create a unique identifier using various attributes
-		if (element.tagName.toLowerCase() === 'img') {
-			// For lazy-loaded images, use data-src as identifier if available
-			const dataSrc = element.getAttribute('data-src');
-			if (dataSrc) return `src:${dataSrc}`;
-			
-			const src = element.getAttribute('src') || '';
-			const srcset = element.getAttribute('srcset') || '';
-			const dataSrcset = element.getAttribute('data-srcset');
-			
-			if (src) return `src:${src}`;
-			if (srcset) return `srcset:${srcset}`;
-			if (dataSrcset) return `srcset:${dataSrcset}`;
-		}
-
-		const id = element.id || '';
-		const className = element.className || '';
-		const viewBox = element.tagName.toLowerCase() === 'svg' ? element.getAttribute('viewBox') || '' : '';
-		
-		if (id) return `id:${id}`;
-		if (viewBox) return `viewBox:${viewBox}`;
-		if (className) return `class:${className}`;
-		
-		return null;
-	}
-
 	private findMainContent(doc: Document): Element | null {
 		// Find all potential content containers
 		const candidates: { element: Element; score: number }[] = [];
@@ -638,9 +313,11 @@ export class Defuddle {
 		const tables = Array.from(doc.getElementsByTagName('table'));
 		const hasTableLayout = tables.some(table => {
 			const width = parseInt(table.getAttribute('width') || '0');
-			const style = this.getComputedStyle(table);
-			return width > 400 || 
-				(style?.width.includes('px') && parseInt(style.width) > 400) ||
+			const inlineStyle = table.getAttribute('style') || '';
+			const inlineWidthMatch = inlineStyle.match(/width:\s*(\d+)px/);
+			const inlineWidth = inlineWidthMatch ? parseInt(inlineWidthMatch[1]) : 0;
+			return width > 400 ||
+				inlineWidth > 400 ||
 				table.getAttribute('align') === 'center' ||
 				table.className.toLowerCase().includes('content') ||
 				table.className.toLowerCase().includes('article');
@@ -672,7 +349,7 @@ export class Defuddle {
 	private getElementSelector(element: Element): string {
 		const parts: string[] = [];
 		let current: Element | null = element;
-		
+
 		while (current && current !== this.doc.documentElement) {
 			let selector = current.tagName.toLowerCase();
 			if (current.id) {
@@ -683,12 +360,8 @@ export class Defuddle {
 			parts.unshift(selector);
 			current = current.parentElement;
 		}
-		
-		return parts.join(' > ');
-	}
 
-	private getComputedStyle(element: Element): CSSStyleDeclaration | null {
-		return getComputedStyle(element);
+		return parts.join(' > ');
 	}
 
 	private _extractSchemaOrgData(doc: Document): any {

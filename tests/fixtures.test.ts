@@ -1,31 +1,34 @@
 import { describe, test, expect } from 'vitest';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, basename, extname } from 'path';
-import { Defuddle, DefuddleResponse } from '../src/node';
+import { parseHTML } from 'linkedom';
+import Defuddle from '../src/index';
+import { createMarkdownContent } from '../src/markdown';
+import type { DefuddleResponse } from '../src/types';
 
 /**
  * Fixtures-based testing for Defuddle extractors
- * 
+ *
  * This test suite automatically discovers HTML fixtures in the tests/fixtures directory
  * and runs comprehensive tests against them. It saves expected results as markdown files
  * in tests/expected/ with JSON metadata as a preamble for easy comparison and review.
- * 
+ *
  * How it works:
  * 1. Processes all .html files in tests/fixtures/ with Defuddle
  * 2. Compares against saved expected results in tests/expected/
  * 3. If no expected result exists, creates a baseline
  * 4. If results differ, fails the test
- * 
+ *
  * Output format:
  * Each expected result is saved as a single .md file with:
  * - JSON metadata (excluding content) as a code block preamble
  * - Followed by the markdown content
- * 
+ *
  * To add new fixtures:
  * 1. Add .html files to tests/fixtures/
  * 2. Run `npm test` - this will create baseline expected results
  * 3. Review the generated files in tests/expected/
- * 
+ *
  * To update expected results:
  * 1. Delete the expected result file in tests/expected/
  * 2. Run `npm test`
@@ -36,7 +39,7 @@ import { Defuddle, DefuddleResponse } from '../src/node';
 function getFixtures(): Array<{ name: string; path: string }> {
   const fixturesDir = join(__dirname, 'fixtures');
   const files = readdirSync(fixturesDir).filter(file => file.endsWith('.html'));
-  
+
   return files.map(file => {
     const name = basename(file, extname(file));
     const path = join(fixturesDir, file);
@@ -64,7 +67,7 @@ function loadExpectedResult(fixtureName: string): string | null {
   if (!existsSync(expectedPath)) {
     return null;
   }
-  
+
   return readFileSync(expectedPath, 'utf-8');
 }
 
@@ -81,7 +84,7 @@ function createComparableResult(response: DefuddleResponse): string {
 
 describe('Fixtures Tests', () => {
   const fixtures = getFixtures();
-  
+
   test('should have fixtures to test', () => {
     expect(fixtures.length).toBeGreaterThan(0);
   });
@@ -89,12 +92,21 @@ describe('Fixtures Tests', () => {
   test.each(fixtures)('should process fixture: $name', async ({ name, path }) => {
     // Load the HTML fixture
     const html = readFileSync(path, 'utf-8');
-    
+    const url = `https://${basename(path)}`;
+
+    // Parse with linkedom
+    const { document } = parseHTML(html);
+
     // Process with Defuddle
-    const response = await Defuddle(html, `https://${basename(path)}`, { separateMarkdown: true });
+    const defuddle = new Defuddle(document as unknown as Document, { url });
+    const response = defuddle.parse() as DefuddleResponse & { contentMarkdown?: string };
+
+    // Convert to markdown
+    response.contentMarkdown = createMarkdownContent(response.content, url);
+
     const result = createComparableResult(response);
     const expected = loadExpectedResult(name);
-    
+
     // Basic validation to ensure the extraction worked
     expect(response.content.length).toBeGreaterThan(0);
     expect(response.contentMarkdown?.length).toBeGreaterThan(0);

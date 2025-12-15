@@ -13,7 +13,15 @@ import { codeBlockRules } from './elements/code';
 import { standardizeFootnotes } from './elements/footnotes';
 import { headingRules } from './elements/headings';
 import { imageRules } from './elements/images';
-import { isElement, isTextNode, isCommentNode, getComputedStyle, logDebug } from './utils';
+import { isElement, isTextNode, isCommentNode, logDebug } from './utils';
+
+// Static set of HTML block-level elements for whitespace handling
+const STATIC_BLOCK_ELEMENTS = new Set([
+	'address', 'article', 'aside', 'blockquote', 'canvas', 'dd', 'div', 'dl', 'dt',
+	'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+	'header', 'hr', 'li', 'main', 'nav', 'noscript', 'ol', 'p', 'pre', 'section',
+	'table', 'tfoot', 'ul', 'video'
+]);
 
 // Element standardization rules
 // Maps selectors to their target HTML element name
@@ -570,8 +578,8 @@ function removeEmptyLines(element: Element, doc: Document): void {
 		// Then normalize this element's whitespace
 		node.normalize(); // Combine adjacent text nodes
 
-		// Special handling for block elements
-		const isBlockElement = getComputedStyle(node)?.display === 'block';
+		// Special handling for block elements (using static list instead of getComputedStyle)
+		const isBlockElement = STATIC_BLOCK_ELEMENTS.has(node.tagName.toLowerCase());
 		
 		// Only remove empty text nodes at the start and end if they contain just newlines/tabs
 		// For block elements, also remove spaces
