@@ -1,5 +1,5 @@
 import { MathMLToLaTeX } from 'mathml-to-latex';
-import * as temml from 'temml';
+import temml from 'temml';
 import {
 	MathData,
 	getMathMLFromElement,

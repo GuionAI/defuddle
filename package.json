@@ -1,7 +1,8 @@
 {
-	"name": "defuddle",
+	"name": "@flicknote/defuddle",
 	"version": "0.6.6",
-	"description": "Extract article content and metadata from web pages.",
+	"description": "Extract article content and metadata from web pages (FlickNote fork, optimized for linkedom/Cloudflare Workers)",
+	"type": "module",
 	"main": "dist/index.js",
 	"module": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -33,7 +34,8 @@
 		"dev:js": "node esbuild.config.mjs --dev",
 		"dev": "npm run clean && npm run build:types && concurrently \"npm run dev:types\" \"npm run dev:js\"",
 		"test": "TZ=UTC vitest run",
-		"playground": "node playground/server.js"
+		"playground": "node playground/server.js",
+		"release": "npx semantic-release"
 	},
 	"keywords": [
 		"readability",
@@ -43,29 +45,31 @@
 		"html-cleanup",
 		"content-parser",
 		"article-parser",
-		"dom"
+		"dom",
+		"linkedom",
+		"cloudflare-workers",
+		"flicknote"
 	],
-	"author": "kepano",
+	"author": "FlickNote Team",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/kepano/defuddle.git"
+		"url": "git@github.com:GuionAI/defuddle.git"
 	},
-	"bugs": {
-		"url": "https://github.com/kepano/defuddle/issues"
-	},
-	"homepage": "https://github.com/kepano/defuddle",
 	"optionalDependencies": {
 		"mathml-to-latex": "^1.4.3",
 		"temml": "^0.11.2",
 		"turndown": "^7.2.0"
 	},
 	"devDependencies": {
+		"@semantic-release/git": "^10.0.1",
+		"@semantic-release/npm": "^13.1.2",
 		"@types/node": "^20.19.0",
 		"@types/turndown": "^5.0.5",
 		"concurrently": "^8.2.2",
 		"esbuild": "^0.24.0",
 		"linkedom": "^0.18.9",
+		"semantic-release": "^25.0.2",
 		"typescript": "^5.3.3",
 		"vitest": "^3.2.4"
 	},
@@ -73,5 +77,9 @@
 		"dist",
 		"README.md",
 		"LICENSE"
-	]
+	],
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	}
 }
