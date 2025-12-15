@@ -18,11 +18,13 @@ npm run playground    # Start local playground server
 
 ## Build System
 
-Two separate build outputs via webpack:
-- `dist/index.js` - Core browser bundle (no dependencies)
-- `dist/index.full.js` - Full bundle with math libraries (mathml-to-latex, temml)
+Two separate build outputs via esbuild (`esbuild.config.mjs`):
+- `dist/index.js` - Core bundle (~85KB) - no math library dependencies
+- `dist/index.full.js` - Full bundle (~461KB) - includes mathml-to-latex, temml
 
 Entry points: `src/index.ts`, `src/index.full.ts`
+
+The math module aliasing (`./elements/math` → `math.core.ts` or `math.full.ts`) is handled by the esbuild plugin in the config.
 
 ## Architecture
 
