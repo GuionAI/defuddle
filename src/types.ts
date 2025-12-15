@@ -20,52 +20,21 @@ export interface MetaTagItem {
 
 export interface DefuddleResponse extends DefuddleMetadata {
 	content: string;
-	contentMarkdown?: string;
 	extractorType?: string;
 	metaTags?: MetaTagItem[];
 }
 
 export interface DefuddleOptions {
-	/**
-	 * Enable debug logging
-	 * Defaults to false
-	 */
-	debug?: boolean;
-
-	/**
-	 * URL of the page being parsed
-	 */
+	/** URL of the page being parsed */
 	url?: string;
-
-	/**
-	 * Convert output to Markdown
-	 * Defaults to false
-	 */
-	markdown?: boolean;
-
-	/**
-	 * Include Markdown in the response
-	 * Defaults to false
-	 */
-	separateMarkdown?: boolean;
-
-	/**
-	 * Remove elements matching exact selectors like ads, social buttons, etc
-	 * Defaults to true
-	 */
+	/** Enable debug logging */
+	debug?: boolean;
+	/** Remove all images */
+	removeImages?: boolean;
+	/** Remove elements matching exact selectors (ads, social buttons, etc) */
 	removeExactSelectors?: boolean;
-
-	/**
-	 * Remove elements matching partial selectors like ads, social buttons, etc
-	 * Defaults to true
-	 */
+	/** Remove elements matching partial selectors */
 	removePartialSelectors?: boolean;
-
-	/**
-	 * Remove images
-	 * Defaults to false
-	 */
-	removeImages?: boolean
 }
 
 export interface ExtractorVariables {

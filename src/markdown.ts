@@ -39,7 +39,7 @@ export function asGenericElement(node: any): GenericElement {
 
 const footnotes: { [key: string]: string } = {};
 
-export function createMarkdownContent(content: string, url: string) {
+export function createMarkdownContent(content: string) {
 	const turndownService = new TurndownService({
 		headingStyle: 'atx',
 		hr: '---',

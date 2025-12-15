@@ -10,6 +10,7 @@ import {
 } from './constants';
 import { standardizeContent } from './standardize';
 import { ContentScorer, ContentScore } from './scoring';
+import { createMarkdownContent } from './markdown';
 
 export class Defuddle {
 	private readonly doc: Document;
@@ -56,12 +57,14 @@ export class Defuddle {
 	 */
 	private parseInternal(overrideOptions: Partial<DefuddleOptions> = {}): DefuddleResponse {
 		const startTime = Date.now();
-		const options = { 
-			removeExactSelectors: true, 
-			removePartialSelectors: true, 
-			...this.options, 
-			...overrideOptions 
+		const options = {
+			removeExactSelectors: true,
+			removePartialSelectors: true,
+			...this.options,
+			...overrideOptions
 		};
+
+		const toMarkdown = (html: string) => createMarkdownContent(html);
 
 		// Extract schema.org data
 		const schemaOrgData = this._extractSchemaOrgData(this.doc);
@@ -91,9 +94,8 @@ export class Defuddle {
 			if (extractor && extractor.canExtract()) {
 				const extracted = extractor.extract();
 				const endTime = Date.now();
-				// console.log('Using extractor:', extractor.constructor.name.replace('Extractor', ''));
 				return {
-					content: extracted.contentHtml,
+					content: toMarkdown(extracted.contentHtml),
 					title: extracted.variables?.title || metadata.title,
 					description: metadata.description,
 					domain: metadata.domain,
@@ -119,10 +121,11 @@ export class Defuddle {
 			const mainContent = this.findMainContent(clone);
 			if (!mainContent) {
 				const endTime = Date.now();
+				const html = this.doc.body.innerHTML;
 				return {
-					content: this.doc.body.innerHTML,
+					content: toMarkdown(html),
 					...metadata,
-					wordCount: this.countWords(this.doc.body.innerHTML),
+					wordCount: this.countWords(html),
 					parseTime: Math.round(endTime - startTime),
 					metaTags: pageMetaTags
 				};
@@ -140,23 +143,24 @@ export class Defuddle {
 			// Normalize the main content
 			standardizeContent(mainContent, metadata, this.doc, this.debug);
 
-			const content = mainContent.outerHTML;
+			const html = mainContent.outerHTML;
 			const endTime = Date.now();
 
 			return {
-				content,
+				content: toMarkdown(html),
 				...metadata,
-				wordCount: this.countWords(content),
+				wordCount: this.countWords(html),
 				parseTime: Math.round(endTime - startTime),
 				metaTags: pageMetaTags
 			};
 		} catch (error) {
 			console.error('Defuddle', 'Error processing document:', error);
 			const endTime = Date.now();
+			const html = this.doc.body.innerHTML;
 			return {
-				content: this.doc.body.innerHTML,
+				content: toMarkdown(html),
 				...metadata,
-				wordCount: this.countWords(this.doc.body.innerHTML),
+				wordCount: this.countWords(html),
 				parseTime: Math.round(endTime - startTime),
 				metaTags: pageMetaTags
 			};

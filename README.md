@@ -7,6 +7,7 @@ A fork of [kepano/defuddle](https://github.com/kepano/defuddle) optimized for **
 
 ## Changes from upstream
 
+- **Always outputs Markdown** (optimized for LLM consumption)
 - Removed browser-specific APIs (`getComputedStyle`, `styleSheets`, `getBoundingClientRect`)
 - Removed Node.js/JSDOM bundle - use linkedom instead
 - Replaced webpack with esbuild for faster builds
@@ -39,10 +40,7 @@ export default {
     const html = await response.text();
     const { document } = parseHTML(html);
 
-    const result = new Defuddle(document, {
-      removeImages: true,
-      url
-    }).parse();
+    const result = new Defuddle(document, { removeImages: true, url }).parse();
 
     return Response.json(result);
   }
@@ -63,7 +61,7 @@ console.log(result.title);
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `content` | string | Cleaned HTML of the extracted content |
+| `content` | string | Extracted content as Markdown |
 | `title` | string | Title of the article |
 | `author` | string | Author of the article |
 | `description` | string | Description or summary |

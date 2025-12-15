@@ -3,7 +3,6 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { parseHTML } from 'linkedom';
 import Defuddle from '../src/index';
-import { createMarkdownContent } from '../src/markdown';
 import type { DefuddleResponse } from '../src/types';
 
 /**
@@ -79,7 +78,7 @@ function createComparableResult(response: DefuddleResponse): string {
     published: response.published,
   };
   const jsonPreamble = '```json\n' + JSON.stringify(metadataOnly, null, 2) + '\n```\n\n';
-  return jsonPreamble + response.contentMarkdown;
+  return jsonPreamble + response.content;
 }
 
 describe('Fixtures Tests', () => {
@@ -90,29 +89,17 @@ describe('Fixtures Tests', () => {
   });
 
   test.each(fixtures)('should process fixture: $name', async ({ name, path }) => {
-    // Load the HTML fixture
     const html = readFileSync(path, 'utf-8');
     const url = `https://${basename(path)}`;
-
-    // Parse with linkedom
     const { document } = parseHTML(html);
 
-    // Process with Defuddle
-    const defuddle = new Defuddle(document as unknown as Document, { url });
-    const response = defuddle.parse() as DefuddleResponse & { contentMarkdown?: string };
-
-    // Convert to markdown
-    response.contentMarkdown = createMarkdownContent(response.content, url);
-
+    const response = new Defuddle(document as unknown as Document, { url }).parse();
     const result = createComparableResult(response);
     const expected = loadExpectedResult(name);
 
-    // Basic validation to ensure the extraction worked
     expect(response.content.length).toBeGreaterThan(0);
-    expect(response.contentMarkdown?.length).toBeGreaterThan(0);
 
     if (!expected) {
-      // No expected result exists, save this as the baseline
       console.log(`Creating baseline expected result for ${name}`);
       saveExpectedResult(name, result);
     }
