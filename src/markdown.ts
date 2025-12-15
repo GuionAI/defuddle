@@ -180,10 +180,10 @@ export function createMarkdownContent(content: string) {
 		filter: 'figure',
 		replacement: function(content, node) {
 			if (!isGenericElement(node)) return content;
-			
+
 			const img = node.querySelector('img');
 			const figcaption = node.querySelector('figcaption');
-			
+
 			if (!img || !isGenericElement(img)) return content;
 
 			const alt = img.getAttribute('alt') || '';
@@ -191,68 +191,32 @@ export function createMarkdownContent(content: string) {
 			let caption = '';
 
 			if (figcaption && isGenericElement(figcaption)) {
+				// Handle ArXiv figure tags (e.g., "Figure 3:")
 				const tagSpan = figcaption.querySelector('.ltx_tag_figure');
 				const tagText = tagSpan && isGenericElement(tagSpan) ? tagSpan.textContent?.trim() : '';
-				
-				// Process the caption content, including math elements
-				let captionContent = figcaption.innerHTML || '';
-				captionContent = captionContent.replace(/<math.*?>(.*?)<\/math>/g, (match, mathContent, offset, string) => {
-					const mathElement = new DOMParser().parseFromString(match, 'text/html').body.firstChild;
-					const latex = mathElement && isGenericElement(mathElement) ? extractLatex(mathElement) : '';
-					const prevChar = string[offset - 1] || '';
-					const nextChar = string[offset + match.length] || '';
 
-					const isStartOfLine = offset === 0 || /\s/.test(prevChar);
-					const isEndOfLine = offset + match.length === string.length || /\s/.test(nextChar);
-
-					const leftSpace = (!isStartOfLine && !/[\s$]/.test(prevChar)) ? ' ' : '';
-					const rightSpace = (!isEndOfLine && !/[\s$]/.test(nextChar)) ? ' ' : '';
-
-					return `${leftSpace}$${latex}$${rightSpace}`;
+				// Convert math elements to LaTeX (query DOM directly, no DOMParser)
+				const mathElements = figcaption.querySelectorAll('math');
+				mathElements.forEach((mathEl: Element) => {
+					const latex = mathEl.getAttribute('alttext') || mathEl.textContent || '';
+					const span = figcaption.ownerDocument?.createElement('span');
+					if (span) {
+						span.textContent = `$${latex}$`;
+						mathEl.parentNode?.replaceChild(span, mathEl);
+					}
 				});
 
-				// Convert the processed caption content to markdown
-				const captionMarkdown = turndownService.turndown(captionContent);
-				
-				// Combine tag and processed caption
-				caption = `${tagText} ${captionMarkdown}`.trim();
+				// Get caption text (after math replacement)
+				const captionText = figcaption.textContent?.trim() || '';
+				caption = tagText ? `${tagText} ${captionText.replace(tagText, '').trim()}` : captionText;
 			}
 
-			// Handle references in the caption
-			caption = caption.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, href) => {
-				return `[${text}](${href})`;
-			});
-
-			return `![${alt}](${src})\n\n${caption}\n\n`;
+			return caption
+				? `![${alt}](${src})\n\n${caption}\n\n`
+				: `![${alt}](${src})\n\n`;
 		}
 	});
 
-	// Use Obsidian format for YouTube embeds and tweets
-	turndownService.addRule('embedToMarkdown', {
-		filter: function (node: Node): boolean {
-			if (!isGenericElement(node)) return false;
-			const src = node.getAttribute('src');
-			return !!src && (
-				!!src.match(/(?:youtube\.com|youtu\.be)/) ||
-				!!src.match(/(?:twitter\.com|x\.com)/)
-			);
-		},
-		replacement: function (content: string, node: Node): string {
-			if (!isGenericElement(node)) return content;
-			const src = node.getAttribute('src');
-			if (src) {
-				const youtubeMatch = src.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:embed\/|watch\?v=)?([a-zA-Z0-9_-]+)/);
-				if (youtubeMatch && youtubeMatch[1]) {
-					return `\n![[${youtubeMatch[1]}]]\n`;
-				}
-				const tweetMatch = src.match(/(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/([^/]+)\/status\/([0-9]+)/);
-				if (tweetMatch && tweetMatch[2]) {
-					return `\n![[${tweetMatch[2]}]]\n`;
-				}
-			}
-			return content;
-		}
-	});
 
 	turndownService.addRule('highlight', {
 		filter: 'mark',
