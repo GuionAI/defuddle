@@ -191,9 +191,30 @@ export class Defuddle {
 	}
 
 	private removeImages(doc: Document) {
-		const images = doc.getElementsByTagName('img');
-		Array.from(images).forEach(image => {
-			image.remove();
+		// Remove pure media elements
+		const mediaTags = ['img', 'picture', 'video', 'source'];
+		mediaTags.forEach(tag => {
+			const elements = doc.getElementsByTagName(tag);
+			Array.from(elements).forEach(el => el.remove());
+		});
+
+		// For figures: remove empty ones, keep those with content (tables, code, captions)
+		const figures = doc.getElementsByTagName('figure');
+		Array.from(figures).forEach(figure => {
+			// Check if figure has meaningful content after image removal
+			const hasTable = figure.querySelector('table');
+			const hasCode = figure.querySelector('pre, code');
+			const hasMath = figure.querySelector('math, .MathJax, .katex');
+			const caption = figure.querySelector('figcaption');
+			const captionText = caption?.textContent?.trim() || '';
+
+			// Keep figure if it has non-image content
+			if (hasTable || hasCode || hasMath || captionText.length > 20) {
+				return; // Keep this figure
+			}
+
+			// Remove empty or image-only figures
+			figure.remove();
 		});
 	}
 
