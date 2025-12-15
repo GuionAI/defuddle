@@ -191,8 +191,8 @@ export class Defuddle {
 	}
 
 	private removeImages(doc: Document) {
-		// Remove pure media elements
-		const mediaTags = ['img', 'picture', 'video', 'source'];
+		// Remove visual media elements (none of these are useful for LLM/markdown)
+		const mediaTags = ['img', 'picture', 'video', 'source', 'svg', 'canvas'];
 		mediaTags.forEach(tag => {
 			const elements = doc.getElementsByTagName(tag);
 			Array.from(elements).forEach(el => el.remove());
