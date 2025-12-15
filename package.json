@@ -32,7 +32,7 @@
 		"dev:types": "tsc --project tsconfig.declarations.json --watch",
 		"dev:js": "node esbuild.config.mjs --dev",
 		"dev": "npm run clean && npm run build:types && concurrently \"npm run dev:types\" \"npm run dev:js\"",
-		"test": "vitest run",
+		"test": "TZ=UTC vitest run",
 		"playground": "node playground/server.js"
 	},
 	"keywords": [
