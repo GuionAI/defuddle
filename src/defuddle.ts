@@ -64,7 +64,7 @@ export class Defuddle {
 			...overrideOptions
 		};
 
-		const toMarkdown = (html: string) => createMarkdownContent(html);
+		const toMarkdown = (html: string) => createMarkdownContent(html, this.doc);
 
 		// Extract schema.org data
 		const schemaOrgData = this._extractSchemaOrgData(this.doc);

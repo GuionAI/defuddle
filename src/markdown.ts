@@ -39,7 +39,7 @@ export function asGenericElement(node: any): GenericElement {
 
 const footnotes: { [key: string]: string } = {};
 
-export function createMarkdownContent(content: string) {
+export function createMarkdownContent(content: string, doc: Document) {
 	const turndownService = new TurndownService({
 		headingStyle: 'atx',
 		hr: '---',
@@ -48,6 +48,11 @@ export function createMarkdownContent(content: string) {
 		emDelimiter: '*',
 		preformattedCode: true,
 	});
+
+	// Create a DOM node from the HTML string - Turndown can process nodes
+	// directly without needing a global document (required for Workers)
+	const container = doc.createElement('div');
+	container.innerHTML = content;
 
 	turndownService.addRule('table', {
 		filter: 'table',
@@ -196,15 +201,15 @@ export function createMarkdownContent(content: string) {
 				const tagText = tagSpan && isGenericElement(tagSpan) ? tagSpan.textContent?.trim() : '';
 
 				// Convert math elements to LaTeX (query DOM directly, no DOMParser)
-				const mathElements = figcaption.querySelectorAll('math');
-				mathElements.forEach((mathEl: Element) => {
+				const mathElements = Array.from(figcaption.querySelectorAll('math'));
+				for (const mathEl of mathElements) {
 					const latex = mathEl.getAttribute('alttext') || mathEl.textContent || '';
 					const span = figcaption.ownerDocument?.createElement('span');
 					if (span) {
 						span.textContent = `$${latex}$`;
 						mathEl.parentNode?.replaceChild(span, mathEl);
 					}
-				});
+				}
 
 				// Get caption text (after math replacement)
 				const captionText = figcaption.textContent?.trim() || '';
@@ -572,7 +577,7 @@ export function createMarkdownContent(content: string) {
 	}
 
 	try {
-		let markdown = turndownService.turndown(content);
+		let markdown = turndownService.turndown(container);
 
 		// Remove the title from the beginning of the content if it exists
 		const titleMatch = markdown.match(/^# .+\n+/);

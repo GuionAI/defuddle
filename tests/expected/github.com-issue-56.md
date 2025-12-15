@@ -29,8 +29,7 @@ This is due to linkedom not implementing `doc.styleSheets`:
 
 Line 213 in [cb4291d](/kepano/defuddle/commit/cb4291db0f24cac0d0674d9e35fc0089338da2da)
 
-|  | const sheets \= Array.from(doc.styleSheets).filter(sheet \=> { |
-| --- | --- |
+const sheets \= Array.from(doc.styleSheets).filter(sheet \=\> {
 
 This could be silenced by falling back to `[]` if `doc.styleSheets` isn't present, however that may not be the desired behavior.
 

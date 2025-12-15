@@ -8,8 +8,12 @@
 	"types": "dist/index.d.ts",
 	"typesVersions": {
 		"*": {
-			"*": ["dist/index.d.ts"],
-			"full": ["dist/index.full.d.ts"]
+			"*": [
+				"dist/index.d.ts"
+			],
+			"full": [
+				"dist/index.full.d.ts"
+			]
 		}
 	},
 	"exports": {
@@ -67,7 +71,7 @@
 		"@types/node": "^20.19.0",
 		"@types/turndown": "^5.0.5",
 		"concurrently": "^8.2.2",
-		"esbuild": "^0.24.0",
+		"esbuild": "^0.27.1",
 		"linkedom": "^0.18.9",
 		"semantic-release": "^25.0.2",
 		"typescript": "^5.3.3",
