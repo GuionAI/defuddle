@@ -43,7 +43,7 @@ export class ChatGPTExtractor extends ConversationExtractor {
 			messageContent = messageContent.replace(/\u200B/g, '');
 
 			// Remove specific elements from the message content
-			const tempDiv = document.createElement('div');
+			const tempDiv = this.document.createElement('div');
 			tempDiv.innerHTML = messageContent;
 			tempDiv.querySelectorAll('h5.sr-only, h6.sr-only, span[data-state="closed"]').forEach(el => el.remove());
 			messageContent = tempDiv.innerHTML;

@@ -46,8 +46,8 @@ export class GeminiExtractor extends ConversationExtractor {
 
 				if (contentElement) {
 					let content = contentElement.innerHTML || '';
-					
-					const tempDiv = document.createElement('div');
+
+					const tempDiv = this.document.createElement('div');
 					tempDiv.innerHTML = content;
 					
 					tempDiv.querySelectorAll('.table-content').forEach(el => {

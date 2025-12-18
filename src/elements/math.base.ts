@@ -17,8 +17,8 @@ export const getMathMLFromElement = (el: Element): MathData | null => {
 
 	// 2. MathML in data-mathml attribute
 	const mathmlStr = el.getAttribute('data-mathml');
-	if (mathmlStr) {
-		const tempDiv = document.createElement('div');
+	if (mathmlStr && el.ownerDocument) {
+		const tempDiv = el.ownerDocument.createElement('div');
 		tempDiv.innerHTML = mathmlStr;
 		const mathElement = tempDiv.querySelector('math');
 		if (mathElement) {

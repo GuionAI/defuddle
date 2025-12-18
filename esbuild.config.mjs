@@ -25,21 +25,23 @@ const commonConfig = {
 };
 
 // Core bundle - excludes math libraries
+// linkedom and turndown are peerDependencies (not bundled)
 await esbuild.build({
 	...commonConfig,
 	entryPoints: ['src/index.ts'],
 	outfile: 'dist/index.js',
 	plugins: [mathAliasPlugin('math.core.ts')],
-	external: ['mathml-to-latex', 'temml', 'turndown'],
+	external: ['linkedom', 'mathml-to-latex', 'temml', 'turndown'],
 });
 
 // Full bundle - includes math libraries
+// linkedom and turndown are peerDependencies (not bundled)
 await esbuild.build({
 	...commonConfig,
 	entryPoints: ['src/index.full.ts'],
 	outfile: 'dist/index.full.js',
 	plugins: [mathAliasPlugin('math.full.ts')],
-	external: ['turndown'],
+	external: ['linkedom', 'turndown'],
 });
 
 console.log('Build complete');

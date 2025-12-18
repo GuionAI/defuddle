@@ -1,3 +1,4 @@
+import { parseHTML } from 'linkedom';
 import { MetadataExtractor } from './metadata';
 import { DefuddleOptions, DefuddleResponse, MetaTagItem } from './types';
 import { ExtractorRegistry } from './extractor-registry';
@@ -26,6 +27,19 @@ export class Defuddle {
 		this.doc = doc;
 		this.options = options;
 		this.debug = options.debug || false;
+	}
+
+	/**
+	 * Parse HTML string and extract its main content.
+	 * This is the recommended API for Cloudflare Workers and other edge runtimes.
+	 *
+	 * @param html - The HTML string to parse
+	 * @param options - Options for parsing
+	 * @returns The extracted content and metadata
+	 */
+	static parse(html: string, options: DefuddleOptions = {}): DefuddleResponse {
+		const { document } = parseHTML(html);
+		return new Defuddle(document, options).parse();
 	}
 
 	/**

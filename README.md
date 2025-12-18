@@ -18,15 +18,23 @@ See [LINKEDOM_COMPAT.md](./LINKEDOM_COMPAT.md) for details on removed features a
 ## Installation
 
 ```bash
-npm install @flicknote/defuddle linkedom
+npm install @flicknote/defuddle linkedom turndown
 ```
+
+### Peer Dependencies
+
+| Package | Required | Purpose |
+|---------|----------|---------|
+| `linkedom` | Yes | DOM implementation for `Defuddle.parse()` |
+| `turndown` | Yes | HTML to Markdown conversion |
 
 ## Usage
 
-### Cloudflare Workers / Edge Runtimes
+### Cloudflare Workers / Edge Runtimes (Recommended)
+
+Use the static `Defuddle.parse()` method for the simplest API:
 
 ```typescript
-import { parseHTML } from 'linkedom';
 import Defuddle from '@flicknote/defuddle';
 
 export default {
@@ -38,13 +46,31 @@ export default {
 
     const response = await fetch(url);
     const html = await response.text();
-    const { document } = parseHTML(html);
 
-    const result = new Defuddle(document, { removeImages: true, url }).parse();
+    // Simple! No need to manually parse HTML
+    const result = Defuddle.parse(html, { removeImages: true, url });
 
     return Response.json(result);
   }
 };
+```
+
+Or use the standalone `parse` function:
+
+```typescript
+import { parse } from '@flicknote/defuddle';
+
+const result = parse(html, { removeImages: true, url });
+```
+
+### With Custom Document (JSDOM, Browser, etc.)
+
+If you have your own Document instance:
+
+```typescript
+import Defuddle from '@flicknote/defuddle';
+
+const result = new Defuddle(document, { url }).parse();
 ```
 
 ### Browser
@@ -52,6 +78,7 @@ export default {
 ```javascript
 import Defuddle from '@flicknote/defuddle';
 
+// Browser has native document
 const result = new Defuddle(document).parse();
 console.log(result.content);
 console.log(result.title);
