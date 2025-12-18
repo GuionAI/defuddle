@@ -102,12 +102,11 @@ export function createMarkdownContent(content: string, doc: Document) {
 		}
 	});
 
-	turndownService.remove(['style', 'script']);
+	turndownService.remove(['style', 'script', 'iframe', 'video', 'audio', 'button']);
 
-	// Keep iframes, video, audio, sup, and sub elements
+	// Keep sup, sub (for footnotes/subscripts), svg, and math elements
 	// @ts-ignore
-	turndownService.keep(['iframe', 'video', 'audio', 'sup', 'sub', 'svg', 'math']);
-	turndownService.remove(['button']);
+	turndownService.keep(['sup', 'sub', 'svg', 'math']);
 
 	turndownService.addRule('list', {
 		filter: ['ul', 'ol'],
