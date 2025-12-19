@@ -1,6 +1,5 @@
 import { BaseExtractor } from './_base';
 import { ConversationMessage, ConversationMetadata, Footnote, ExtractorResult } from '../types/extractors';
-import { Defuddle } from '../defuddle';
 
 export abstract class ConversationExtractor extends BaseExtractor {
 	protected abstract extractMessages(): ConversationMessage[];
@@ -13,18 +12,14 @@ export abstract class ConversationExtractor extends BaseExtractor {
 		const messages = this.extractMessages();
 		const metadata = this.getMetadata();
 		const footnotes = this.getFootnotes();
-		const rawContentHtml = this.createContentHtml(messages, footnotes);
+		const contentHtml = this.createContentHtml(messages, footnotes);
 
-		// Create a temporary document to run Defuddle on our content
-		// Use this.document (from linkedom) instead of global document
-		const tempDoc = this.document.implementation.createHTMLDocument();
-		const container = tempDoc.createElement('article');
-		container.innerHTML = rawContentHtml;
-		tempDoc.body.appendChild(container);
-
-		// Run Defuddle on our formatted content
-		const defuddled = new Defuddle(tempDoc).parse();
-		const contentHtml = defuddled.content;
+		// Calculate word count by stripping HTML tags
+		const textContent = contentHtml
+			.replace(/<[^>]*>/g, ' ')
+			.replace(/\s+/g, ' ')
+			.trim();
+		const wordCount = textContent ? textContent.split(' ').length : 0;
 
 		return {
 			content: contentHtml,
@@ -36,7 +31,7 @@ export abstract class ConversationExtractor extends BaseExtractor {
 				title: metadata.title || 'Conversation',
 				site: metadata.site,
 				description: metadata.description || `${metadata.site} conversation with ${messages.length} messages`,
-				wordCount: defuddled.wordCount?.toString() || '',
+				wordCount: wordCount.toString(),
 			}
 		};
 	}
