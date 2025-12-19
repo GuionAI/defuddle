@@ -70,25 +70,19 @@ export class ClaudeExtractor extends ConversationExtractor {
 	}
 
 	private getTitle(): string {
-		// Try to get the page title first
+		// Try page title (handles both "- Claude" and "| Claude" suffixes)
 		const pageTitle = this.document.title?.trim();
 		if (pageTitle && pageTitle !== 'Claude') {
-			// Remove ' - Claude' suffix if present
-			return pageTitle.replace(/ - Claude$/, '');
+			return pageTitle.replace(/\s*[-|]\s*Claude$/, '');
 		}
 
-		// Try to get title from header
-		const headerTitle = this.document.querySelector('header .font-tiempos')?.textContent?.trim();
-		if (headerTitle) {
-			return headerTitle;
-		}
-
-		// Fall back to first user message
-		const firstUserMessage = this.articles?.item(0)?.querySelector('[data-testid="user-message"]');
-		if (firstUserMessage) {
-			const text = firstUserMessage.textContent || '';
-			// Truncate to first 50 characters if longer
-			return text.length > 50 ? text.slice(0, 50) + '...' : text;
+		// Fall back to first user message text
+		const firstArticle = this.articles?.item(0);
+		if (firstArticle?.getAttribute('data-testid') === 'user-message') {
+			const text = firstArticle.textContent?.trim() || '';
+			if (text) {
+				return text.length > 50 ? text.slice(0, 50) + '...' : text;
+			}
 		}
 
 		return 'Claude Conversation';
